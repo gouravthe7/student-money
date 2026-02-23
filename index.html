@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Life OS | Dashboard</title>
+    
+    <!-- FONTS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- CHART.JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- CSS VARIABLES & THEME (PASTEL PALETTE) --- */
+        :root {
+            --palette-pink: #F7CBCA;
+            --palette-warm-grey: #DDD8D3;
+            --palette-white: #F1F7F7;
+            --palette-pale-blue: #D5E5E5;
+            --palette-teal: #BDD7D8;
+            --palette-slate: #5D6B6B;
+
+            --bg-color: var(--palette-white); 
+            --card-bg: rgba(255, 255, 255, 0.75); 
+            --primary: var(--palette-slate); 
+            --primary-hover: #4a5656;
+            --accent: var(--palette-teal);
+            --text-main: var(--palette-slate);
+            --text-muted: #859595;
+            --input-bg: rgba(255, 255, 255, 0.9);
+            --input-border: var(--palette-warm-grey);
+            
+            --safe: #508e86; 
+            --warning: #d98f8d; 
+            --critical: #b86060;
+
+            --ease-fintech: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-smooth: ease-in-out;
+            --transition-fast: 0.2s var(--ease-fintech);
+            --transition-medium: 0.3s var(--ease-fintech);
+            --transition-slow: 0.5s var(--ease-fintech);
+
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, var(--palette-pale-blue) 0%, var(--palette-white) 40%, var(--palette-white) 60%, var(--palette-pink) 100%);
+            background-attachment: fixed;
+            color: var(--text-main); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-x: hidden; 
+            font-family: var(--font-sans);
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- TYPOGRAPHY --- */
+        h1, h2, h3, .card-title, .nav-title, .big-number { 
+            font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.5px; color: var(--palette-slate);
+        }
+        p { color: var(--text-muted); line-height: 1.6; font-size: 0.95rem; font-weight: 400; }
+
+        /* --- NAVBAR --- */
+        .navbar { 
+            padding: 2rem; display: flex; justify-content: space-between; align-items: center; 
+            background: transparent; border-bottom: 1px solid rgba(93, 107, 107, 0.1);
+        }
+        .nav-brand { cursor: pointer; transition: transform var(--transition-fast); }
+        .nav-brand:hover { transform: scale(1.02); }
+        .nav-title { font-size: 1.75rem; margin-bottom: 0.15rem; }
+        .nav-tagline { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 500;}
+        .nav-links button { 
+            background: none; border: none; color: var(--text-muted); font-size: 0.95rem; margin-left: 2rem; 
+            cursor: pointer; transition: color var(--transition-fast), transform var(--transition-fast); 
+            font-weight: 500; font-family: var(--font-sans);
+        }
+        .nav-links button:hover { color: var(--text-main); transform: translateY(-1px); }
+        .nav-links button:active { transform: scale(0.96); }
+
+        /* --- LAYOUT & VIEWS --- */
+        .container { flex: 1; padding: 3rem 2rem; max-width: 1100px; margin: 0 auto; width: 100%; }
+        .view-section { display: none; opacity: 0; }
+        .view-section.active { display: block; animation: slideUpFade var(--transition-slow) forwards; }
+
+        .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 2.5rem; margin-top: 1.5rem; }
+        @media (min-width: 768px) { .dashboard-grid { grid-template-columns: 1fr 1fr; } }
+
+        /* --- CARDS --- */
+        .card { 
+            background-color: var(--card-bg); border-radius: 1.25rem; padding: 2.5rem; 
+            border: 1px solid rgba(255, 255, 255, 0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            display: flex; flex-direction: column; height: 100%; 
+            box-shadow: 0 10px 25px -5px rgba(93, 107, 107, 0.08);
+            transition: border-color var(--transition-medium), box-shadow var(--transition-medium), transform var(--transition-medium);
+            opacity: 0; animation: slideUpFade 0.5s var(--ease-fintech) forwards;
+        }
+        .card:hover { 
+            transform: translateY(-6px); border-color: rgba(255, 255, 255, 1); 
+            box-shadow: 0 25px 40px -10px rgba(93, 107, 107, 0.15);
+        }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .card-title { font-size: 1.5rem; }
+        .big-number { font-size: 3.5rem; font-weight: 700; margin: 0.5rem 0; line-height: 1.1; }
+
+        /* --- LISTS & GRIDS --- */
+        .wallet-list { list-style: none; margin: 1.5rem 0; flex-grow: 1; }
+        .wallet-list li { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 1.25rem; margin-bottom: 0.75rem; background-color: rgba(255, 255, 255, 0.5); 
+            border-radius: 0.75rem; border: 1px solid var(--palette-warm-grey); font-weight: 500;
+        }
+        #dash-wallet-list li { 
+            padding: 1rem 0; background-color: transparent; border: none; 
+            border-bottom: 1px solid rgba(93, 107, 107, 0.1); border-radius: 0; margin-bottom: 0; 
+        }
+        #dash-wallet-list li:last-child { border-bottom: none; }
+        
+        .grid-2col { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .grid-3col { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 768px) { 
+            .grid-2col { grid-template-columns: 1fr 1fr; } 
+            .grid-3col { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        /* --- FORMS, FILTERS & SEARCH --- */
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-muted); font-size: 0.9rem; transition: color var(--transition-fast); }
+        .form-group input, .form-group textarea, .form-group select { 
+            width: 100%; padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--input-border); 
+            background-color: var(--input-bg); color: var(--text-main); font-size: 1rem; font-family: var(--font-sans); font-weight: 500;
+            transition: all var(--transition-fast); 
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { 
+            outline: none; border-color: var(--palette-teal); background-color: #ffffff;
+            box-shadow: 0 0 0 4px rgba(189, 215, 216, 0.25); transform: translateY(-1px);
+        }
+        .form-group:focus-within label { color: var(--primary); }
+
+        .search-bar-container { position: relative; flex-grow: 1; max-width: 400px; }
+        .search-bar-container svg { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+        .search-bar-container input { padding-left: 2.75rem; width: 100%; border-radius: 2rem; border: 1px solid var(--palette-warm-grey); padding-top: 0.75rem; padding-bottom: 0.75rem; background: var(--card-bg); font-family: var(--font-sans); font-weight: 500; color: var(--text-main); transition: all var(--transition-fast); outline: none;}
+        .search-bar-container input:focus { border-color: var(--palette-teal); background: #fff; box-shadow: 0 0 0 4px rgba(189, 215, 216, 0.25); transform: translateY(-1px); }
+
+        select.modern-select {
+            width: auto; padding: 0.75rem 1.25rem; border-radius: 2rem; 
+            background-color: var(--card-bg); border: 1px solid var(--palette-warm-grey); 
+            color: var(--text-main); font-weight: 500; outline: none; cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        select.modern-select:hover { border-color: var(--palette-teal); transform: translateY(-1px); }
+
+        /* --- BUTTONS --- */
+        .btn { 
+            display: inline-block; width: 100%; padding: 1rem 1.5rem; 
+            border-radius: 2rem; border: none; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; 
+            text-align: center; margin-top: auto; font-family: var(--font-sans); transition: all var(--transition-medium);
+        }
+        .btn:active { transform: scale(0.96) !important; }
+        .btn-primary { background: var(--primary); color: var(--palette-white); box-shadow: 0 4px 15px rgba(93, 107, 107, 0.2), 0 0 0 rgba(93, 107, 107, 0); }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px) scale(1.02); box-shadow: 0 8px 20px rgba(93, 107, 107, 0.25), 0 0 12px rgba(93, 107, 107, 0.15); }
+        .btn-outline { background-color: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background-color: rgba(93, 107, 107, 0.05); transform: translateY(-1px) scale(1.02); }
+        
+        .btn-icon { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 1.25rem; display: flex; align-items: center; justify-content: center; transition: color var(--transition-fast), transform var(--transition-fast); padding: 0.25rem; }
+        .btn-icon:hover { transform: scale(1.1); }
+        .btn-icon:active { transform: scale(0.9); }
+        .btn-icon.edit:hover { color: var(--primary); }
+        .btn-icon.delete:hover { color: var(--critical); }
+
+        /* --- TOAST --- */
+        #toast-container { position: fixed; bottom: 30px; right: 30px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background-color: var(--palette-slate); color: white; padding: 1.25rem 2rem; border-radius: 2rem; box-shadow: 0 10px 25px rgba(93,107,107,0.3); display: flex; align-items: center; justify-content: space-between; min-width: 250px; animation: slideIn 0.4s var(--ease-fintech) forwards; opacity: 0; transform: translateX(100%); font-weight: 500; font-size: 0.95rem; }
+        .toast.success { background-color: var(--safe); }
+        .toast.error { background-color: var(--critical); }
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideOut { to { opacity: 0; transform: translateX(100%); } }
+
+        /* --- MODALS --- */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(241, 247, 247, 0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; visibility: hidden; transition: all var(--transition-slow); 
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal { 
+            background-color: #ffffff; padding: 2.5rem; border-radius: 1.5rem; border: 1px solid var(--palette-warm-grey); width: 90%; max-width: 500px; 
+            box-shadow: 0 30px 60px -15px rgba(93,107,107,0.3); transform: translateY(40px) scale(0.95); transition: transform var(--transition-slow); max-height: 90vh; overflow-y: auto; 
+        }
+        .modal-overlay.active .modal { transform: translateY(0) scale(1); }
+
+        /* --- EXPENSE SPECIFIC --- */
+        .tx-list { list-style: none; margin: 1.5rem 0; flex-grow: 1; }
+        .tx-item { 
+            display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid rgba(93, 107, 107, 0.1); 
+            font-weight: 500; opacity: 0; transform: translateY(10px); animation: slideUpFade 0.4s var(--ease-fintech) forwards;
+        }
+        .tx-item:hover { background: rgba(255,255,255,0.4); border-radius: 0.5rem; padding-left: 0.5rem; padding-right: 0.5rem; transition: all var(--transition-fast);}
+        .tx-item:last-child { border-bottom: none; }
+        .text-green { color: var(--safe); }
+        .text-red { color: var(--critical); }
+
+        .d-none { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-brand" onclick="navigateTo('dashboard')">
+            <h1 class="nav-title">StudentLife.</h1>
+            <p class="nav-tagline">Financial Control</p>
+        </div>
+        <div class="nav-links">
+            <button onclick="navigateTo('dashboard')">Overview</button>
+            <button onclick="navigateTo('expense')">Analytics & Wallets</button>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTAINER -->
+    <main class="container">
+
+        <!-- 1. DASHBOARD VIEW -->
+        <section id="dashboard" class="view-section active">
+            <h2 style="margin-bottom: 1.5rem; font-size: 2.5rem;">Dashboard</h2>
+            
+            <div class="dashboard-grid">
+                <!-- Card 1: Expense Overview -->
+                <div class="card" style="grid-column: 1 / -1; max-width: 900px; margin: 0 auto; width: 100%;">
+                    <div class="card-header">
+                        <span class="card-title">Wallet Overview</span>
+                    </div>
+                    <p>Total Available Balance</p>
+                    <div class="big-number" id="dash-total-balance" data-val="0">₹0</div>
+                    <ul class="wallet-list" id="dash-wallet-list"></ul>
+                    <button class="btn btn-outline" style="margin-top: 1.5rem;" onclick="navigateTo('expense')">Manage Wallets</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. EXPENSE VIEW -->
+        <section id="expense" class="view-section">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2.5rem;">
+                <h2 style="font-size: 2.5rem;">Wallets & Analytics</h2>
+                <h2 id="expense-total-display" class="text-green" style="font-size: 2rem;" data-val="0">₹0</h2>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Create New Wallet</h3>
+                <form id="create-wallet-form" onsubmit="event.preventDefault(); createWallet();">
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label for="wallet-name">Wallet Name</label>
+                            <input type="text" id="wallet-name" placeholder="e.g. GPay, Cash" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="wallet-initial">Initial Balance (₹)</label>
+                            <input type="number" id="wallet-initial" placeholder="0" min="0" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem; width: auto; min-width: 200px;">Create Wallet</button>
+                </form>
+
+                <div style="margin-top: 3.5rem;">
+                    <h3 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Your Active Wallets</h3>
+                    <div id="expense-wallet-grid" class="grid-2col"></div>
+                </div>
+
+                <!-- UNIFIED TRANSACTION PANEL & ADVANCED ANALYTICS -->
+                <div style="margin-top: 4rem; border-top: 1px solid rgba(93,107,107,0.1); padding-top: 3.5rem;">
+                    
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap;">
+                        <div class="search-bar-container">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <input type="text" id="tx-search" placeholder="Search description, category, wallet..." oninput="renderUnifiedTransactions()">
+                        </div>
+                        
+                        <select id="tx-filter" class="modern-select" onchange="renderUnifiedTransactions()">
+                            <option value="current_month">This Month</option>
+                            <option value="last_month">Last Month</option>
+                            <option value="last_3_months">Last 3 Months</option>
+                            <option value="all_time">All Time</option>
+                        </select>
+                    </div>
+
+                    <div class="grid-3col" style="margin-bottom: 3rem;">
+                        <div class="card" style="padding: 2rem;">
+                            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Total Income</p>
+                            <div id="summary-income" class="big-number text-green" style="font-size: 2.25rem; margin: 0;" data-val="0">₹0</div>
+                        </div>
+                        <div class="card" style="padding: 2rem; animation-delay: 0.1s;">
+                            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Total Expense</p>
+                            <div id="summary-expense" class="big-number text-red" style="font-size: 2.25rem; margin: 0;" data-val="0">₹0</div>
+                        </div>
+                        <div id="net-card" class="card" style="padding: 2rem; animation-delay: 0.2s;">
+                            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Net Change</p>
+                            <div id="summary-net" class="big-number" style="font-size: 2.25rem; margin: 0;" data-val="0">₹0</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col" style="margin-bottom: 3rem;">
+                        <!-- PIE CHART CARD -->
+                        <div class="card" style="padding: 2.5rem; animation-delay: 0.3s;">
+                            <h4 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Expense Distribution</h4>
+                            <div style="position: relative; height: 300px; width: 100%;">
+                                <canvas id="expenseCategoryChart"></canvas>
+                                <div id="chart-empty-state" class="d-none" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-muted); text-align: center; width: 100%;">
+                                    No expense data available for this period.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TRANSACTIONS LIST CARD -->
+                        <div class="card" style="padding: 2.5rem; animation-delay: 0.4s;">
+                            <h4 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Transaction Ledger</h4>
+                            <div style="max-height: 300px; overflow-y: auto; padding-right: 1rem;">
+                                <ul id="unified-tx-list" class="tx-list" style="margin-top: 0;"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- EXPENSE MODALS -->
+    <div id="tx-modal" class="modal-overlay">
+        <div class="modal">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="font-size: 1.5rem;">New Transaction: <span id="tx-wallet-title" style="color: var(--primary);"></span></h3>
+                <button class="btn-icon" onclick="closeModal('tx-modal')">✖</button>
+            </div>
+            <form onsubmit="event.preventDefault(); saveTransaction();">
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="tx-type" required onchange="document.getElementById('tx-category-group').style.display = this.value === 'expense' ? 'block' : 'none';">
+                        <option value="expense">Expense (-)</option>
+                        <option value="income">Income (+)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="tx-category-group">
+                    <label>Category</label>
+                    <select id="tx-category">
+                        <option value="Food">Food</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Recharge">Recharge</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Education">Education</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="tx-amount" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="tx-desc" placeholder="e.g. Grocery, Book..." required>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="tx-date" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-bottom: 1rem;">Save Transaction</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('tx-modal')">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal-overlay">
+        <div class="modal">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="font-size: 1.5rem;">History: <span id="hist-wallet-title" style="color: var(--primary);"></span></h3>
+                <button class="btn-icon" onclick="closeModal('history-modal')">✖</button>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
+                <ul id="hist-list" class="tx-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div id="toast-container"></div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- 1. STATE MANAGEMENT (LocalStorage) ---
+        const defaultData = {
+            expenses: { wallets: [], total: 0 }
+        };
+
+        function loadData() {
+            const savedData = localStorage.getItem('studentLifeOsData');
+            let data = savedData ? JSON.parse(savedData) : defaultData;
+            
+            if (!data.expenses) data.expenses = { wallets: [], total: 0 };
+            if (!data.expenses.wallets) data.expenses.wallets = [];
+            data.expenses.wallets.forEach(w => { if (!w.transactions) w.transactions = []; });
+            
+            return data;
+        }
+
+        function saveData(data) { localStorage.setItem('studentLifeOsData', JSON.stringify(data)); }
+        let appData = loadData();
+        let activeWalletIndex = -1;
+        let expensePieChartInstance = null; 
+
+        // --- 2. MOTION UTILITIES (ANIMATED NUMBER COUNTER) ---
+        function animateValue(elementId, newValue, formatType = 'default') {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            const oldValue = parseFloat(element.dataset.val) || 0;
+            if (oldValue === newValue && element.dataset.initialized) {
+                element.textContent = formatCurrency(newValue, formatType);
+                return;
+            }
+            
+            element.dataset.val = newValue;
+            element.dataset.initialized = "true";
+            
+            const duration = 500; 
+            let startTimestamp = null;
+            
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                
+                const ease = 1 - Math.pow(1 - progress, 3); 
+                const current = oldValue + (newValue - oldValue) * ease;
+                
+                element.textContent = formatCurrency(current, formatType);
+                
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    element.textContent = formatCurrency(newValue, formatType); 
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        function formatCurrency(value, type) {
+            const absVal = Math.abs(Math.round(value));
+            const fmt = `₹${absVal.toLocaleString('en-IN')}`;
+            if (type === 'net') return (value > 0 ? '+' : (value < 0 ? '-' : '')) + fmt;
+            if (type === 'income') return '+' + fmt;
+            if (type === 'expense') return '-' + fmt;
+            return fmt;
+        }
+
+        function animateElementValue(element, newValue) {
+            const oldValue = parseFloat(element.dataset.val) || 0;
+            if (oldValue === newValue && element.dataset.initialized) return;
+
+            element.dataset.val = newValue;
+            element.dataset.initialized = "true";
+
+            const duration = 500;
+            let startTimestamp = null;
+            
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3); 
+                const current = Math.round(oldValue + (newValue - oldValue) * ease);
+                
+                element.textContent = `₹${current.toLocaleString('en-IN')}`;
+                
+                if (progress < 1) window.requestAnimationFrame(step);
+                else element.textContent = `₹${newValue.toLocaleString('en-IN')}`;
+            };
+            window.requestAnimationFrame(step);
+        }
+
+
+        // --- 3. NAVIGATION LOGIC ---
+        function navigateTo(viewId) {
+            document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            if(viewId === 'dashboard') updateDashboardUI();
+            else if (viewId === 'expense') renderWallets();
+        }
+
+        // --- 4. DASHBOARD LOGIC ---
+        function updateDashboardUI() {
+            if(typeof renderWallets === 'function') renderWallets();
+        }
+
+        // --- 5. EXPENSE MODULE LOGIC & ADVANCED ANALYTICS ---
+        function renderWallets() {
+            const expenseGrid = document.getElementById('expense-wallet-grid');
+            const dashList = document.getElementById('dash-wallet-list');
+            
+            if(expenseGrid) expenseGrid.innerHTML = '';
+            if(dashList) dashList.innerHTML = '';
+            
+            let currentTotal = 0;
+
+            if (appData.expenses.wallets.length === 0) {
+                if(expenseGrid) expenseGrid.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1;">No wallets created yet.</p>';
+            }
+
+            appData.expenses.wallets.forEach((wallet, index) => {
+                currentTotal += wallet.balance;
+
+                if(expenseGrid) {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.style.padding = '2rem';
+                    card.style.animationDelay = `${index * 0.05}s`;
+                    
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                            <h3 style="margin:0; font-size: 1.25rem;">${wallet.name}</h3>
+                            <button class="btn-icon delete" onclick="deleteWallet(${index})">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
+                        <p style="font-size: 0.875rem; margin-bottom: 0.25rem;">Current Balance</p>
+                        <div class="big-number dyn-balance" style="font-size: 2.25rem; margin-top: 0; margin-bottom: 1.5rem;" data-val="${wallet.balance}">₹${wallet.balance.toLocaleString('en-IN')}</div>
+                        
+                        <div style="display:flex; gap: 0.75rem; margin-top: auto;">
+                            <button class="btn btn-primary" style="padding: 0.75rem; font-size: 0.85rem;" onclick="openTxModal(${index})">+ Add Tx</button>
+                            <button class="btn btn-outline" style="padding: 0.75rem; font-size: 0.85rem;" onclick="openHistoryModal(${index})">History</button>
+                        </div>
+                    `;
+                    expenseGrid.appendChild(card);
+                    const numEl = card.querySelector('.dyn-balance');
+                    numEl.dataset.initialized = "false";
+                    animateElementValue(numEl, wallet.balance);
+                }
+
+                if(dashList) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span>${wallet.name}</span> <strong style="font-weight: 600;">₹${wallet.balance.toLocaleString('en-IN')}</strong>`;
+                    dashList.appendChild(li);
+                }
+            });
+
+            appData.expenses.total = currentTotal;
+            saveData(appData); 
+
+            animateValue('dash-total-balance', currentTotal);
+            animateValue('expense-total-display', currentTotal);
+            
+            renderUnifiedTransactions();
+        }
+
+        function createWallet() {
+            const name = document.getElementById('wallet-name').value.trim();
+            const initialBalance = parseFloat(document.getElementById('wallet-initial').value);
+
+            if (!name) return showToast("Wallet name cannot be empty.", "error");
+            if (isNaN(initialBalance) || initialBalance < 0) return showToast("Initial balance cannot be negative.", "error");
+            if (appData.expenses.wallets.find(w => w.name.toLowerCase() === name.toLowerCase())) return showToast(`Wallet '${name}' already exists.`, "error");
+
+            const newWallet = { name: name, balance: initialBalance, transactions: [] };
+            if (initialBalance > 0) {
+                newWallet.transactions.push({ id: Date.now(), type: 'income', amount: initialBalance, description: 'Initial Balance', category: null, date: new Date().toISOString().split('T')[0] });
+            }
+
+            appData.expenses.wallets.push(newWallet);
+            saveData(appData);
+            renderWallets();
+            
+            document.getElementById('wallet-name').value = '';
+            document.getElementById('wallet-initial').value = '';
+            showToast("Wallet created successfully!", "success");
+        }
+
+        function deleteWallet(index) {
+            if(confirm("Delete this wallet and all its transactions?")) {
+                const deletedName = appData.expenses.wallets[index].name;
+                appData.expenses.wallets.splice(index, 1);
+                saveData(appData);
+                renderWallets();
+                showToast(`Deleted ${deletedName}.`, "success");
+            }
+        }
+
+        function openTxModal(index) {
+            activeWalletIndex = index;
+            document.getElementById('tx-wallet-title').textContent = appData.expenses.wallets[index].name;
+            document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('tx-amount').value = '';
+            document.getElementById('tx-desc').value = '';
+            document.getElementById('tx-type').value = 'expense';
+            document.getElementById('tx-category-group').style.display = 'block';
+            document.getElementById('tx-category').value = 'Food';
+            document.getElementById('tx-modal').classList.add('active');
+        }
+
+        function saveTransaction() {
+            if (activeWalletIndex < 0) return;
+            const wallet = appData.expenses.wallets[activeWalletIndex];
+            const type = document.getElementById('tx-type').value;
+            const category = type === 'expense' ? document.getElementById('tx-category').value : null;
+            const amount = parseFloat(document.getElementById('tx-amount').value);
+            const desc = document.getElementById('tx-desc').value.trim();
+            const date = document.getElementById('tx-date').value;
+
+            if (isNaN(amount) || amount <= 0) return showToast("Amount must be a positive number.", "error");
+            if (!desc) return showToast("Description is required.", "error");
+            if (type === 'expense' && amount > wallet.balance) return showToast(`Expense cannot exceed balance.`, "error");
+
+            wallet.balance += (type === 'expense' ? -amount : amount);
+            wallet.transactions.push({ id: Date.now(), type, amount, description: desc, category, date });
+
+            saveData(appData);
+            renderWallets();
+            closeModal('tx-modal');
+            showToast("Transaction saved.", "success");
+        }
+
+        function openHistoryModal(index) {
+            const wallet = appData.expenses.wallets[index];
+            document.getElementById('hist-wallet-title').textContent = wallet.name;
+            const listEl = document.getElementById('hist-list');
+            listEl.innerHTML = '';
+
+            if (wallet.transactions.length === 0) {
+                listEl.innerHTML = '<li class="tx-item" style="justify-content:center; color: var(--text-muted); border: none;">No transactions yet.</li>';
+            } else {
+                const sortedTx = [...wallet.transactions].sort((a, b) => b.id - a.id);
+                sortedTx.forEach((tx, i) => {
+                    const isInc = tx.type === 'income';
+                    const li = document.createElement('li');
+                    li.className = 'tx-item';
+                    li.style.animationDelay = `${i * 0.05}s`; 
+                    li.innerHTML = `
+                        <div><div style="font-weight:500; margin-bottom: 0.2rem;">${tx.description}</div><div style="font-size:0.8rem;color:var(--text-muted);">${tx.date}</div></div>
+                        <div class="${isInc ? 'text-green' : 'text-red'}" style="font-size: 1.1rem; font-weight: 600;">${isInc ? '+' : '-'}₹${tx.amount.toLocaleString('en-IN')}</div>
+                    `;
+                    listEl.appendChild(li);
+                });
+            }
+            document.getElementById('history-modal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            activeWalletIndex = -1;
+        }
+
+        // --- FILTER & SEARCH UNIFIED LOGIC ---
+        function renderUnifiedTransactions() {
+            const filterEl = document.getElementById('tx-filter');
+            const searchEl = document.getElementById('tx-search');
+            
+            const filter = filterEl ? filterEl.value : 'current_month';
+            const query = searchEl ? searchEl.value.toLowerCase().trim() : '';
+            
+            const listEl = document.getElementById('unified-tx-list');
+
+            if(!listEl) return;
+
+            let allTx = [];
+            appData.expenses.wallets.forEach(w => {
+                w.transactions.forEach(tx => allTx.push({ ...tx, walletName: w.name }));
+            });
+
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+
+            let filteredTx = allTx.filter(tx => {
+                const txDate = new Date(tx.date);
+                let dateMatch = true;
+
+                // 1. DATE FILTER LOGIC
+                if (filter === 'current_month') {
+                    dateMatch = txDate.getFullYear() === currentYear && txDate.getMonth() === currentMonth;
+                } else if (filter === 'last_month') {
+                    const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+                    dateMatch = txDate.getFullYear() === lastMonthDate.getFullYear() && txDate.getMonth() === lastMonthDate.getMonth();
+                } else if (filter === 'last_3_months') {
+                    const threeMonthsAgo = new Date(currentYear, currentMonth - 2, 1); 
+                    dateMatch = txDate >= threeMonthsAgo;
+                }
+
+                // 2. SEARCH FILTER LOGIC
+                let searchMatch = true;
+                if (query !== '') {
+                    searchMatch = tx.description.toLowerCase().includes(query) ||
+                                  tx.walletName.toLowerCase().includes(query) ||
+                                  (tx.category && tx.category.toLowerCase().includes(query));
+                }
+
+                return dateMatch && searchMatch;
+            });
+
+            filteredTx.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
+
+            let tInc = 0, tExp = 0;
+            filteredTx.forEach(tx => {
+                if(tx.type === 'income') tInc += tx.amount;
+                else tExp += tx.amount;
+            });
+            const net = tInc - tExp;
+
+            animateValue('summary-income', tInc, 'income');
+            animateValue('summary-expense', tExp, 'expense');
+            animateValue('summary-net', net, 'net');
+            
+            const netNum = document.getElementById('summary-net');
+            netNum.className = `big-number ${net >= 0 ? 'text-green' : 'text-red'}`;
+
+            listEl.innerHTML = '';
+            if (filteredTx.length === 0) {
+                listEl.innerHTML = '<li style="justify-content:center; color: var(--text-muted); padding: 2rem 0; border:none;">No transactions found.</li>';
+            } else {
+                filteredTx.forEach((tx, index) => {
+                    const isInc = tx.type === 'income';
+                    const sign = isInc ? '+' : '-';
+                    const colorClass = isInc ? 'text-green' : 'text-red';
+                    const d = new Date(tx.date);
+                    const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+                    const li = document.createElement('li');
+                    li.className = 'tx-item';
+                    li.style.alignItems = 'center';
+                    li.style.animationDelay = `${index * 0.03}s`; // Faster stagger for search
+                    li.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 1.25rem;">
+                            <div style="background: rgba(255,255,255,0.5); padding: 0.6rem; border-radius: 0.75rem; font-size: 0.8rem; color: var(--palette-slate); min-width: 65px; text-align: center; border: 1px solid var(--input-border); font-weight: 500;">
+                                ${dateStr}
+                            </div>
+                            <div>
+                                <div style="font-weight: 500; margin-bottom: 0.2rem;">${tx.description}</div>
+                                <div style="font-size: 0.8rem; color: var(--palette-slate); font-weight: 600; opacity: 0.8;">${tx.walletName} ${tx.category ? `• ${tx.category}` : ''}</div>
+                            </div>
+                        </div>
+                        <div class="${colorClass}" style="font-size: 1.15rem; font-weight: 600;">
+                            ${sign}₹${tx.amount.toLocaleString('en-IN')}
+                        </div>
+                    `;
+                    listEl.appendChild(li);
+                });
+            }
+
+            // Sync and Re-render Pie Chart
+            renderExpensePieChart(filteredTx);
+        }
+
+        // --- 6. CHART.JS LOGIC ---
+        function calculateCategoryExpenses(filteredTransactions) {
+            const categoryTotals = { "Food": 0, "Recharge": 0, "Travel": 0, "Shopping": 0, "Education": 0, "Other": 0 };
+            let hasData = false;
+
+            filteredTransactions.forEach(tx => {
+                if (tx.type === 'expense') {
+                    const cat = tx.category || "Other";
+                    if (categoryTotals[cat] !== undefined) categoryTotals[cat] += tx.amount;
+                    else categoryTotals["Other"] += tx.amount;
+                    hasData = true;
+                }
+            });
+
+            return { hasData, labels: Object.keys(categoryTotals), data: Object.values(categoryTotals) };
+        }
+
+        function renderExpensePieChart(filteredTransactions) {
+            const canvas = document.getElementById('expenseCategoryChart');
+            const emptyState = document.getElementById('chart-empty-state');
+            if (!canvas || !emptyState) return;
+
+            const { hasData, labels, data } = calculateCategoryExpenses(filteredTransactions);
+
+            if (expensePieChartInstance) {
+                expensePieChartInstance.destroy();
+            }
+
+            if (!hasData || data.every(val => val === 0)) {
+                canvas.style.display = 'none';
+                emptyState.classList.remove('d-none');
+                return;
+            }
+
+            canvas.style.display = 'block';
+            emptyState.classList.add('d-none');
+
+            const ctx = canvas.getContext('2d');
+            expensePieChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#F7CBCA', // Pink
+                            '#BDD7D8', // Teal
+                            '#5D6B6B', // Slate
+                            '#DDD8D3', // Warm Grey
+                            '#D5E5E5', // Pale Blue
+                            '#e0a3a1'  // Extra
+                        ],
+                        borderWidth: 2,
+                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim() || '#ffffff',
+                        hoverOffset: 12, 
+                        hoverBorderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: 15 },
+                    animation: { duration: 600, easing: 'easeInOutQuart' }, // Snappier for search
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#5D6B6B',
+                                font: { family: "'Inter', sans-serif", size: 12, weight: 500 },
+                                usePointStyle: true, 
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#5D6B6B',
+                            bodyColor: '#5D6B6B',
+                            borderColor: '#DDD8D3',
+                            borderWidth: 1,
+                            padding: 12,
+                            boxPadding: 6,
+                            usePointStyle: true,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed !== null) {
+                                        label += '₹' + context.parsed.toLocaleString('en-IN');
+                                        let total = context.chart._metasets[context.datasetIndex].total;
+                                        let percentage = Math.round((context.parsed / total) * 100) + "%";
+                                        label += ' (' + percentage + ')';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 7. UTILITIES ---
+        function showToast(msg, type = "error") {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${type === 'success' ? 'success' : (type === 'info' ? 'info' : 'error')}`; t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => { t.style.animation = "slideOut 0.4s var(--ease-fintech) forwards"; setTimeout(() => t.remove(), 400); }, 3000);
+        }
+
+        // Initialize App
+        window.onload = () => updateDashboardUI();
+    </script>
+</body>
+</html>
